@@ -75,7 +75,7 @@ def main():
 
     eval_plugin = EvaluationPlugin(
         accuracy_metrics(experience=True, stream=True), loss_metrics(experience=True, stream=True),
-        class_accuracy_metrics(stream=True),
+        class_accuracy_metrics(experience=True, stream=True),
         loggers=[text_logger, interactive_logger])
 
     strategy = Naive(
@@ -105,8 +105,11 @@ def main():
         break
 
     print(f"Average mean test accuracy: {sum(accuracies_test) / len(accuracies_test) * 100:.3f}%")
+    print(f"Average mean test accuracy: {sum(accuracies_test) / len(accuracies_test) * 100:.3f}%",
+          file=open(f'./{args.name}.log', 'a'))
     print(f"Final mean test accuracy: {accuracies_test[-1] * 100:.3f}%")
-
+    print(f"Final mean test accuracy: {accuracies_test[-1] * 100:.3f}%",
+          file=open(f'./{args.name}.log', 'a'))
 
 
 def _create_val_set(root, img_size):
@@ -135,7 +138,7 @@ def _create_test_set(root, img_size):
                                                 img_size=img_size)
     test_sets_keys = [ds.meta for ds in test_sets if len(ds) > 0]
     test_sets = [AvalancheDataset(test_set, targets=test_set.targets()) for test_set in test_sets if len(test_set) > 0]
-    return test_sets, test_sets_keys
+    return [test_sets[0]], test_sets_keys
 
 
 def _create_train_set(root, img_size):

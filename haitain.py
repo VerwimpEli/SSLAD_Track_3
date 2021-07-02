@@ -40,7 +40,7 @@ _default_transform = torchvision.transforms.Compose([
 
 class HaitainObject:
     """
-    A class that contains the image, label and obj id. This is required to later get back the meta data of an object.
+    A class that contains the image, label and obj id.
     """
     def __init__(self, x, y, obj_id):
         self.x = x
@@ -101,14 +101,7 @@ class HaitainObjectSet(torch.utils.data.Dataset):
         return len(self.samples)
 
     def __getitem__(self, item):
-        if self.img_size is not None:
-            return self.lazy_get(item)
-        else:
-            sample = self.samples[item]
-            x, y = sample.x, sample.y
-            if self.transform is not None:
-                x = self.transform(x)
-            return x, y
+        return self.lazy_get(item)
 
     def chronological_sort(self):
         time_stamps, video_ids, sequence_ids = [], [], []
@@ -415,8 +408,6 @@ class Logger:
 
     def average_by_class(self):
         self.df['acc'] = self.df[['acc ped', 'acc cyc', 'acc car', 'acc tru', 'acc tra', 'acc tri']].mean(1)
-        self.df['loss'] = self.df[['loss ped', 'loss cyc', 'loss car', 'loss tru', 'loss tra', 'loss tri']].mean(1)
-        self.df['count'] = self.df[['count ped', 'count cyc', 'count car', 'count tru', 'count tra', 'count tri']].sum(1)
 
     def plot_stats(self, ax, domains, average=False, metric='acc', class_keys=None, ylim=(0, 1), color=None):
         if average:
@@ -467,6 +458,9 @@ class Logger:
 
     def load(self, name):
         self.df = pd.read_pickle(f'./results/stats_{name}.pkl')
+
+    def load_path(self, path):
+        self.df = pd.read_pickle(path)
 
     def table_print(self, timestamp, avg=False):
         table_data = self.df[self.df['time'] == timestamp]
