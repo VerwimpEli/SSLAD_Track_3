@@ -13,6 +13,7 @@ from avalanche.training.plugins import EvaluationPlugin
 from avalanche.training.strategies import Naive
 from class_strategy import *
 
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--name', type=str, default='test',
@@ -101,6 +102,8 @@ def main():
             logger.build_df()
             logger.save(f'./{args.name}.pkl')
 
+        break
+
     print(f"Average mean test accuracy: {sum(accuracies_test) / len(accuracies_test) * 100:.3f}%")
     print(f"Final mean test accuracy: {accuracies_test[-1] * 100:.3f}%")
 
@@ -150,17 +153,6 @@ def _create_train_set(root, img_size):
         ts.chronological_sort()
 
     return [AvalancheDataset(train_set, targets=train_set.targets()) for train_set in train_sets]
-
-
-def _create_joint(root, img_size):
-    def joint_match(obj, img_dic, obj_dic):
-        img_annot = img_dic[obj_dic[obj.id]['image_id']]
-        date = img_annot["date"]
-        return date == "20191120" or date == "20191117" or date == "20191111" or \
-               (date == "20191121" and img_annot['period'] == "Night")
-
-    train_set = haitain.get_matching_set(root, 'val', match_fn=joint_match, img_size=img_size)
-    return [AvalancheDataset(train_set, targets=train_set.targets())]
 
 
 if __name__ == '__main__':

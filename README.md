@@ -7,6 +7,9 @@ it easy to compare and setup very customizable benchmarks.
 
 #### Instructions 
 
+_Tested with python 3.9, pytorch 1.9.0, torchvision 0.10.0 and 
+cuda toolkit 10.2_
+
 Step one is to clone the Avalanche Fork 
 [here](https://github.com/VerwimpEli/avalanche). Later, we will
 move to the current release of Avalanche. Then, make sure
@@ -33,3 +36,20 @@ model, optimizer and loss criterion.
 
 `haitain.py`: This file contains all code to get the challenge
 and data setup, shouldn't be touched or altered.
+
+#### Avalanche instructions
+
+Implementing a new strategy in Avalanche works by implementing a
+subclass of the `StrategyPlugin`. This plugin is passed through 
+when updating the model and its callback methods are called during training
+of the model. For examples of how such strategies work, see the `training/plugins` 
+folder inside Avalanche for some well known methods. For a more in depth explanation, 
+see the tutorials on the [avalanche website](https://avalanche.continualai.org/from-zero-to-hero-tutorial/04_training).
+
+#### Notes
+* Currently PyTorch with Python 3.9 is giving a warning about leaking thread pools 
+when using multiple workers. This is expected. See [this](https://github.com/pytorch/pytorch/issues/60171)
+  issue.
+    
+* The current installation command on the PyTorch website doesn't work. You should
+add the `conda-forge` channel for installing.
