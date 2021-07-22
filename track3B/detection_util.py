@@ -230,10 +230,6 @@ def create_test_set(root):
     test_sets = [haitain.get_matching_set(root, 'test', match_fn, haitain.get_transform(False)) for
                  match_fn in match_fns]
 
-    # TODO: remove this!
-    for ts in test_sets:
-        ts.samples = ts.samples[:5]
-
     test_set_keys = ["Task 1", "Task 2", "Task 3", "Task 4"]
     test_sets = [AvalancheDataset(test_set) for test_set in test_sets if len(test_set) > 0]
 
