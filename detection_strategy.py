@@ -1,10 +1,10 @@
 from avalanche.training.plugins.strategy_plugin import StrategyPlugin
 
 
-class ClassStrategyPlugin(StrategyPlugin):
+class DetectionStrategyPlugin(StrategyPlugin):
 
     def __init__(self):
-        super(ClassStrategyPlugin).__init__()
+        super(DetectionStrategyPlugin).__init__()
         pass
 
     def before_training(self, strategy: 'BaseStrategy', **kwargs):

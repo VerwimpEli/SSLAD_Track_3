@@ -49,7 +49,7 @@ def main():
 
     # Add any additional plugins to be used by Avalanche to this list. A template
     # is provided in class_strategy.py.
-    plugins = [ClassStrategy()]
+    plugins = [ClassStrategyPlugin()]
 
     ######################################
     #                                    #
