@@ -120,7 +120,7 @@ class DetectionMetric(Metric):
     def store_results(self):
         if self.store is not None and len(self._dt) > 0:
             file_name = f"{self.store}.json"
-            with open(f"./det_results/{file_name}", 'a') as f:
+            with open(f"./{file_name}", 'a') as f:
                 json.dump(self._dt, f)
 
     def reset(self) -> None:
@@ -196,6 +196,7 @@ class DetectionBaseStrategy(BaseStrategy):
         elif self.is_eval:
             return self.model(self.mb_x)
 
+
 def create_train_val_set(root, validation_proportion=0.1):
     splits = ['train', 'val', 'val', 'val']
     task_dicts = [{'city': 'Shanghai', 'location': 'Citystreet', 'period': 'Daytime', 'weather': 'Clear'},
@@ -228,6 +229,10 @@ def create_test_set(root):
     match_fns = [haitain.create_match_fn_from_dict(td) for td in task_dicts]
     test_sets = [haitain.get_matching_set(root, 'test', match_fn, haitain.get_transform(False)) for
                  match_fn in match_fns]
+
+    # TODO: remove this!
+    for ts in test_sets:
+        ts.samples = ts.samples[:5]
 
     test_set_keys = ["Task 1", "Task 2", "Task 3", "Task 4"]
     test_sets = [AvalancheDataset(test_set) for test_set in test_sets if len(test_set) > 0]
