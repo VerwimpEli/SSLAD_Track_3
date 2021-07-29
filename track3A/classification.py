@@ -12,17 +12,18 @@ from avalanche.training.strategies import Naive
 
 from class_strategy import *
 from classification_util import *
-import haitain_classification as hc
 
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--name', type=str, default='test',
+    parser.add_argument('--name', type=str, default='result',
                         help='Name of the result files')
     parser.add_argument('--root', default="../data",
                         help='Root folder where the data is stored')
     parser.add_argument('--num_workers', type=int, default=4,
                         help='Num workers to use for dataloading. Recommended to have more than 1')
+    parser.add_argument('--store', action='store_true',
+                        help="If set the prediciton files required for submission will be created")
     parser.add_argument('--test', action='store_true',
                         help='If set model will be evaluated on test set, else on validation set')
     parser.add_argument('--no_cuda', action='store_true',
@@ -35,7 +36,7 @@ def main():
     #                                    #
     ######################################
 
-    args.root = f"{args.root}/huawei/dataset/labeled"
+    args.root = f"{args.root}/labeled_desen/dataset/labeled"
     device = torch.device('cuda' if torch.cuda.is_available() and not args.no_cuda else 'cpu')
 
     model = torchvision.models.resnet50(pretrained=True)
@@ -71,33 +72,27 @@ def main():
 
     text_logger = TextLogger(open(f"./{args.name}.log", 'w'))
     interactive_logger = InteractiveLogger()
+    store = args.name if args.store else None
 
     eval_plugin = EvaluationPlugin(
         accuracy_metrics(experience=True, stream=True), loss_metrics(experience=True, stream=True),
         class_accuracy_metrics(experience=True, stream=True),
+        ClassEvaluationPlugin(reset_at='experience', emit_at='experience', mode='eval',
+                              store=store),
         loggers=[text_logger, interactive_logger])
 
     strategy = Naive(
         model, optimizer, criterion, train_mb_size=batch_size, train_epochs=1, eval_mb_size=256, device=device,
         evaluator=eval_plugin, eval_every=1, plugins=plugins)
 
-    logger = hc.Logger()
     accuracies_test = []
-
     for i, experience in enumerate(benchmark.train_stream):
-        print("Start of experience: ", experience.current_experience)
-
         # Shuffle will be passed through to dataloader creator.
         strategy.train(experience, eval_streams=[], shuffle=False, num_workers=args.num_workers)
 
         results = strategy.eval(benchmark.test_stream, num_workers=args.num_workers)
         mean_acc = results['Top1_ClassAcc_Stream/eval_phase/test_stream'].values()
         accuracies_test.append(sum(mean_acc) / len(mean_acc))
-
-        if evaluate == "test":
-            hc.log_avalanche_results(results, test_sets_keys, logger, test_id=i, run_id=0)
-            logger.build_df()
-            logger.save(f'./{args.name}.pkl')
 
     print(f"Average mean test accuracy: {sum(accuracies_test) / len(accuracies_test) * 100:.3f}%")
     print(f"Average mean test accuracy: {sum(accuracies_test) / len(accuracies_test) * 100:.3f}%",

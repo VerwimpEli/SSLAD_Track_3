@@ -2,7 +2,6 @@ import datetime
 import re
 from typing import Iterator, List
 
-import cv2
 import numpy as np
 import pandas as pd
 import torch.utils.data
@@ -10,6 +9,7 @@ import torchvision
 import json
 import pickle
 import os
+from PIL import Image
 from itertools import product
 
 from torch.utils.data.sampler import T_co
@@ -71,6 +71,7 @@ class HaitainObjectSet(torch.utils.data.Dataset):
         self.root = root
         self.split = split
 
+    @property
     def targets(self):
         """
         :return: List of all labels in the set
@@ -88,11 +89,10 @@ class HaitainObjectSet(torch.utils.data.Dataset):
         obj_id = self.samples[item].id
         file_name = self.image_annot[self.obj_annot[obj_id]['image_id']]['file_name']
         # img = torchvision.io.read_image(os.path.join(self.root, self.split, file_name))
-        img = cv2.imread(os.path.join(self.root, self.split, file_name))
+        img = Image.open(os.path.join(self.root, self.split, file_name)).convert('RGB')
         yb, ye, xb, xe = _rescale_bbox(self.obj_annot[obj_id]['bbox'])
-        img = img[yb:ye, xb:xe]
-        img = cv2.resize(img, (self.img_size, self.img_size))
-        img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+        img = img.crop((xb, yb, xe, ye))
+        img = img.resize((self.img_size, self.img_size))
         x = self.transform(img)
         y = self.obj_annot[obj_id]['category_id']
         return x, y
@@ -256,7 +256,7 @@ def _load_all_objects_ids(obj_dic, min_area=1024, remove_occluded=True):
     return objects
 
 
-def get_matching_set(root, split, match_fn, img_size=None) -> HaitainObjectSet:
+def get_matching_set(root, split, match_fn, img_size=None, transform=None) -> HaitainObjectSet:
     """
     :param root: root path of where to look for pickled object files
     :param split: train, val or test split
@@ -264,6 +264,7 @@ def get_matching_set(root, split, match_fn, img_size=None) -> HaitainObjectSet:
                      in the dataset
     :param img_size: If set, the objects will be lazely loaded and cutted from the images rather than loading them
                      in memory. This is much slower, but required for larger images.
+    :param transform: Transofrmation to apply to images. If None, _default_transform will be applied.
     :return: an HaitainObjectSet containing all samples that evaluate to true in match_fn
     """
 
@@ -273,8 +274,11 @@ def get_matching_set(root, split, match_fn, img_size=None) -> HaitainObjectSet:
     else:
         all_objects = _load_all_objects_ids(obj_dic)
 
+    if transform is None:
+        transform = _default_transform
+
     matching = [obj for obj in all_objects if match_fn(obj, img_dic, obj_dic)]
-    return HaitainObjectSet(matching, _default_transform, image_annot=img_dic, obj_annot=obj_dic,
+    return HaitainObjectSet(matching, transform, image_annot=img_dic, obj_annot=obj_dic,
                             root=root, split=split, img_size=img_size)
 
 

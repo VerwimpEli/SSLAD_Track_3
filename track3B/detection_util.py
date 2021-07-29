@@ -15,8 +15,6 @@ from torch.optim import Optimizer
 from typing import Optional, List
 from pycocotools.coco import COCO
 from pycocotools.cocoeval import COCOeval
-import datetime
-
 import haitain_detection as haitain
 
 categories = {
@@ -57,6 +55,11 @@ class DetectionEvaluationPlugin(GenericPluginMetric):
             self._detection_results, reset_at=reset_at, emit_at=emit_at,
             mode=mode)
 
+    def before_eval_exp(self, strategy: 'BaseStrategy'):
+        super().before_eval_exp(strategy)
+        # Don't know of another way to access the original dataset.
+        self._detection_results.set_path(strategy.experience.dataset._dataset._dataset.annotation_file)
+
     def update(self, strategy):
         img_ids = [target['image_id'] for target in strategy.mb_y]
         self._detection_results.update(strategy.mb_output, img_ids)
@@ -67,11 +70,16 @@ class DetectionEvaluationPlugin(GenericPluginMetric):
 
 class DetectionMetric(Metric):
 
-    def __init__(self, gt_path, store=False):
+    def __init__(self, gt_path, store=None):
         self.gt_path = gt_path
-        self.store = store
         self._gt = self.load_gt()
         self._dt = []
+        self.store = store
+
+        if self.store is not None:
+            self.index = 0
+            while os.path.isfile(f"./{self.store}_{self.index}.json"):
+                self.index += 1
 
     @torch.no_grad()
     def update(self, prediction, img_ids):
@@ -90,8 +98,10 @@ class DetectionMetric(Metric):
         with open("./tmp_results.json", "w") as f:
             json.dump(self._dt, f)
         dt = self._gt.loadRes('./tmp_results.json')
+        img_ids = [dt['image_id'] for dt in self._dt]
         coco_eval = COCOeval(self._gt, dt, 'bbox')
         coco_eval.params.iouThrs = [0.5, 0.7]
+        coco_eval.params.imgIds = img_ids
         coco_eval.evaluate()
         coco_eval.accumulate()
 
@@ -102,7 +112,7 @@ class DetectionMetric(Metric):
         mean, count = 0, 0
         for i in range(1, 7):
             s = coco_eval.eval['precision'][ious[i - 1], :, i - 1, 0, -1]
-            if len(s[s == -1] == 0):
+            if len(s[s > -1]) == 0:
                 res = -1
             else:
                 res = np.mean(s[s > -1])
@@ -119,12 +129,17 @@ class DetectionMetric(Metric):
 
     def store_results(self):
         if self.store is not None and len(self._dt) > 0:
-            file_name = f"{self.store}.json"
-            with open(f"./{file_name}", 'a') as f:
+            file_name = f"{self.store}_{self.index}.json"
+            with open(f"./{file_name}", 'w') as f:
                 json.dump(self._dt, f)
+            self.index += 1
 
     def reset(self) -> None:
         self._dt = []
+
+    def set_path(self, gt_path):
+        self.gt_path = gt_path
+        self._gt = self.load_gt()
 
     def load_gt(self):
         return COCO(self.gt_path)
@@ -154,7 +169,7 @@ class DetectionBaseStrategy(BaseStrategy):
         self.dataloader = DataLoader(
             self.adapted_dataset,
             batch_size=self.train_mb_size,
-            shuffle=False,
+            shuffle=shuffle,
             num_workers=num_workers,
             collate_fn=collate_fn
         )
@@ -197,7 +212,7 @@ class DetectionBaseStrategy(BaseStrategy):
             return self.model(self.mb_x)
 
 
-def create_train_val_set(root, validation_proportion=0.1):
+def create_train_val_set(root, validation_proportion=0.1, avalanche=True):
     splits = ['train', 'val', 'val', 'val']
     task_dicts = [{'city': 'Shanghai', 'location': 'Citystreet', 'period': 'Daytime', 'weather': 'Clear'},
                   {'location': 'Highway', 'period': 'Daytime', 'weather': ['Clear', 'Overcast']},
@@ -213,11 +228,14 @@ def create_train_val_set(root, validation_proportion=0.1):
         all_samples = ts.samples
         ts.samples = all_samples[:cut_off]
         val_samples = all_samples[cut_off:]
-        val_sets.append(haitain.HaitainDetectionSet(ts.root, val_samples, ts.annotation_file, ts.transform,
-                                                    ts.meta))
+        val_sets.append(haitain.HaitainDetectionSet(ts.root, val_samples, ts.annotation_file,
+                                                    haitain.get_transform(False), ts.meta))
 
-    return [AvalancheDataset(train_set) for train_set in train_sets], \
-           [AvalancheDataset(val_set) for val_set in val_sets]
+    if avalanche:
+        return [AvalancheDataset(train_set) for train_set in train_sets], \
+               [AvalancheDataset(val_set) for val_set in val_sets]
+    else:
+        return train_sets, val_sets
 
 
 def create_test_set(root):
@@ -234,3 +252,38 @@ def create_test_set(root):
     test_sets = [AvalancheDataset(test_set) for test_set in test_sets if len(test_set) > 0]
 
     return test_sets, test_set_keys
+
+
+def create_val_set(root):
+    validation_proportion = 1.0
+
+    def neg_match_fn(match_fns):
+        def neg_val_set(img_name: str, img_annotations) -> bool:
+            for mf in match_fns:
+                if mf(img_name, img_annotations):
+                    return False
+            else:
+                return True
+        return neg_val_set
+
+
+    splits = ['train', 'val', 'val', 'val', 'val']
+    task_dicts = [{'city': 'Shanghai', 'location': 'Citystreet', 'period': 'Daytime', 'weather': 'Clear'},
+                  {'location': 'Highway', 'period': 'Daytime', 'weather': ['Clear', 'Overcast']},
+                  {'period': 'Night'},
+                  {'period': 'Daytime', 'weather': 'Rainy'}]
+
+    match_fns = [haitain.create_match_fn_from_dict(td) for td in task_dicts]
+    all_match_fns = [*match_fns, neg_match_fn(match_fns[1:])]
+    train_sets = [haitain.get_matching_set(root, split, match_fn, haitain.get_transform(True)) for
+                  match_fn, split in zip(all_match_fns, splits)]
+    val_sets = []
+    for ts in train_sets:
+        cut_off = int((1.0 - validation_proportion) * len(ts))
+        all_samples = ts.samples
+        ts.samples = all_samples[:cut_off]
+        val_samples = all_samples[cut_off:]
+        val_sets.append(haitain.HaitainDetectionSet(ts.root, val_samples, ts.annotation_file,
+                                                    haitain.get_transform(False), ts.meta))
+
+    return [AvalancheDataset(val_set) for val_set in val_sets]
