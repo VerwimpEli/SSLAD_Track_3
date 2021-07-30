@@ -24,19 +24,6 @@ cuda toolkit 10.2*
 *Any questions, problems... can be mailed to 
 eli.verwimp(at)kuleuven.be.* 
 
-### File overview
-
-`class_strategy.py`: Provides an empty plugin. Here, you can define
-your own strategy, by implementing the necessary callbacks. Helper
-methods can be ofcourse implemented as pleased.
-
-`classification.py`: Driver code for the classification subtrack. 
-There are a few things that can be changed here, such as the
-model, optimizer and loss criterion. 
-
-`haitain.py`: This file contains all code to get the challenge
-and data setup, shouldn't be touched or altered.
-
 ### Avalanche instructions
 
 Implementing a new strategy in Avalanche works by implementing a
