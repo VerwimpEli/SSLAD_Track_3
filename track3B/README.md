@@ -1,7 +1,7 @@
 ### ICCV 2021 Workshop SSLAD Track 3B - Continual Learning Detection
 
 See the Codalab challenge for the challenge details
-[here](https://competitions.codalab.org/competitions/33830).
+[here](https://competitions.codalab.org/competitions/33993).
 
 ### File overview
 
