@@ -1,5 +1,37 @@
 from avalanche.training.plugins.strategy_plugin import StrategyPlugin
 
+"""
+A strategy pulgin can change the strategy parameters before and after 
+every important fucntion. The structure is shown belown. For instance, self.before_train_forward() and
+self.after_train_forward() will be called before and after the main forward loop of the strategy.
+
+The training loop is organized as follows::
+        **Training loop**
+            train
+                train_exp  # for each experience
+                    adapt_train_dataset
+                    train_dataset_adaptation
+                    make_train_dataloader
+                    train_epoch  # for each epoch
+                        train_iteration # for each minibatch
+                            forward
+                            backward
+                            model update
+
+        **Evaluation loop**
+        The evaluation loop is organized as follows::
+            eval
+                eval_exp  # for each experience
+                    adapt_eval_dataset
+                    eval_dataset_adaptation
+                    make_eval_dataloader
+                    eval_epoch  # for each epoch
+                        eval_iteration # for each minibatch
+                            forward
+                            backward
+                            model update
+"""
+
 
 class ClassStrategyPlugin(StrategyPlugin):
 

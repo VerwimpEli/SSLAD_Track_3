@@ -5,26 +5,24 @@ thirth track of the SSLAD ICCV 2021 workshop, about Continual
 Learning. The code is build with the Avalanche framework, making
 it easy to compare and setup very customizable benchmarks.
 
-#### Instructions 
+#### Install instructions 
 
-_Tested with python 3.9, pytorch 1.9.0, torchvision 0.10.0 and 
-cuda toolkit 10.2_
+*Tested with python 3.9, pytorch 1.9.0, torchvision 0.10.0 and 
+cuda toolkit 10.2* 
 
-Step one is to clone the Avalanche Fork 
-[here](https://github.com/VerwimpEli/avalanche). Later, we will
-move to the current release of Avalanche. Then, make sure
-the Avalanche directory is on your PYTHONPATH.
+1. Clone the Avalanche Fork [here](https://github.com/VerwimpEli/avalanche) \
+`git clone https://github.com/VerwimpEli/avalanche.git`
+2. Create a (new) conda environment with PyTorch and torchvision installed. \
+`conda create -n sslad python=3.9` \
+`conda activate sslad` \
+`conda install pytorch torchvision torchaudio cudatoolkit=10.2 -c pytorch -c conda-forge`
+3. Then, make sure the Avalanche directory is on your PYTHONPATH. \
+`export PYTHONPATH=[Avalanche directory]:$PYTHONPATH`
 
-Step two is to get a conda environement with PyTorch and
-torchvision running.
+*Any questions, problems... can be mailed to 
+eli.verwimp(at)kuleuven.be.* 
 
-Step three is to update the conda enivornment, using the 
-`env.yml` file in this repo. 
-
-Any questions, problems... can be mailed to 
-eli.verwimp (at) kuleuven.be . 
-
-#### File overview
+### File overview
 
 `class_strategy.py`: Provides an empty plugin. Here, you can define
 your own strategy, by implementing the necessary callbacks. Helper
@@ -37,7 +35,7 @@ model, optimizer and loss criterion.
 `haitain.py`: This file contains all code to get the challenge
 and data setup, shouldn't be touched or altered.
 
-#### Avalanche instructions
+### Avalanche instructions
 
 Implementing a new strategy in Avalanche works by implementing a
 subclass of the `StrategyPlugin`. This plugin is passed through 
@@ -46,7 +44,11 @@ of the model. For examples of how such strategies work, see the `training/plugin
 folder inside Avalanche for some well known methods. For a more in depth explanation, 
 see the tutorials on the [avalanche website](https://avalanche.continualai.org/from-zero-to-hero-tutorial/04_training).
 
-#### Notes
+**Don't hesitate to contact me at eli.verwimp(at)kuleuven.be if you don't immediately
+know how to implement your method in Avalanche. It's easy, but learning a new framework 
+can be challenging sometimes.**
+
+### Notes
 * Currently PyTorch with Python 3.9 is giving a warning about leaking thread pools 
 when using multiple workers. This is expected. See [this](https://github.com/pytorch/pytorch/issues/60171)
   issue.
