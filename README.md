@@ -16,7 +16,9 @@ cuda toolkit 10.2*
 `conda create -n sslad python=3.9` \
 `conda activate sslad` \
 `conda install pytorch torchvision torchaudio cudatoolkit=10.2 -c pytorch -c conda-forge`
-3. Then, make sure the Avalanche directory is on your PYTHONPATH. \
+3. Update your conda environment with the provided .yml file. \
+`conda env update --file env.yml`
+4. Then, make sure the Avalanche directory is on your PYTHONPATH. \
 `export PYTHONPATH=[Avalanche directory]:$PYTHONPATH`
 
 *Any questions, problems... can be mailed to 
