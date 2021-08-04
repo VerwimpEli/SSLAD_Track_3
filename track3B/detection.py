@@ -78,7 +78,7 @@ def main():
 
     result_file = open(f"./{args.name}_{test_split}.txt", "w")
     logger = TextLogger(result_file)
-    gt_path = f"{args.root}/SSLAD-2D/labeled/annotations/instance_{test_split}.json"
+    gt_path = f"{args.root}/annotations/instance_{test_split}.json"
     store = None if not args.store else f"{args.name}_{test_split}"
     eval_plugin = EvaluationPlugin(detection_metrics(gt_path, experience=True, store=store),
                                    loggers=logger)
