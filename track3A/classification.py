@@ -36,7 +36,7 @@ def main():
     #                                    #
     ######################################
 
-    args.root = f"{args.root}/labeled_desen/dataset/labeled"
+    args.root = f"{args.root}/SSLAD-2D/labeled"
     device = torch.device('cuda' if torch.cuda.is_available() and not args.no_cuda else 'cpu')
 
     model = torchvision.models.resnet50(pretrained=True)

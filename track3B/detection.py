@@ -38,7 +38,7 @@ def main():
     ######################################
 
     device = 'cuda' if torch.cuda.is_available() and not args.no_cuda else 'cpu'
-    data_root = f"{args.root}/labeled_desen/dataset/labeled"
+    data_root = args.root = f"{args.root}/SSLAD-2D/labeled"
 
     epochs = 10
     batch_size = 1
@@ -65,10 +65,12 @@ def main():
 
     # Setup Benchmark
     train_datasets, val_datasets = create_train_val_set(data_root, validation_proportion=0.01)
-    # val_datasets = create_val_set(data_root)
-    test_datasets, test_set_keys = create_test_set(data_root)
 
-    eval_datasets = test_datasets if args.test else val_datasets
+    if args.test:
+        eval_datasets, _ = create_test_set(data_root)
+    else:
+        eval_datasets = val_datasets
+
     benchmark = create_multi_dataset_generic_benchmark(train_datasets=train_datasets, test_datasets=eval_datasets)
 
     # Setup evaluation and logging
@@ -76,7 +78,7 @@ def main():
 
     result_file = open(f"./{args.name}_{test_split}.txt", "w")
     logger = TextLogger(result_file)
-    gt_path = f"{args.root}/labeled_desen/dataset/labeled/annotations/instance_{test_split}.json"
+    gt_path = f"{args.root}/SSLAD-2D/labeled/annotations/instance_{test_split}.json"
     store = None if not args.store else f"{args.name}_{test_split}"
     eval_plugin = EvaluationPlugin(detection_metrics(gt_path, experience=True, store=store),
                                    loggers=logger)

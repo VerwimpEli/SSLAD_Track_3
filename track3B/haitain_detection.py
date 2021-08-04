@@ -233,7 +233,7 @@ def _load_annotations(file_name: str) -> Tuple[Dict[str, Dict], Dict[str, Dict]]
     obj_annotations = {obj['id']: obj for obj in annot_json["annotations"]}
     img_annotations = {img['id']: img for img in annot_json["images"]}
 
-    _correct_data(img_annotations, obj_annotations)
+    # _correct_data(img_annotations, obj_annotations)
 
     return img_annotations, obj_annotations
 
