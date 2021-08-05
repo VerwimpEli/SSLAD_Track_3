@@ -23,13 +23,15 @@ class HaitainDetectionSet(torch.utils.data.Dataset):
 
     def __init__(self, root: str,
                  samples: List[str],
-                 annotation_file: str,
+                 annotation_file: str = None,
                  transform: Any = None,
-                 meta: Any = None
+                 meta: Any = None,
+                 test: bool = False,
                  ):
         """
         :param root: root path of the folder where files are stored
         :param samples: File names of samples
+        :param test: If set no labels are loaded.
         :param transform: Transform to be applied to images before returning
         :param meta: Anything to describe data. (Usefull during testing).
         """
@@ -37,10 +39,14 @@ class HaitainDetectionSet(torch.utils.data.Dataset):
         self.samples = samples
         self.transform = transform
         self.meta = meta
+        self.test = test
 
-        self.annotation_file = annotation_file
-        self.img_annotations, self.obj_annotations = _load_annotations(annotation_file)
-        self._remove_empty_images()
+        if not test:
+            self.annotation_file = annotation_file
+            self.img_annotations, self.obj_annotations = _load_annotations(annotation_file)
+            self._remove_empty_images()
+        else:
+            self.annotation_file, self.img_annotations, self.obj_annotations = None, None, None
 
         self.categories = {1: "Pedestrian", 2: "Cyclist", 3: "Car", 4: "Truck", 5: "Tram", 6: "Tricycle"}
 
@@ -62,6 +68,9 @@ class HaitainDetectionSet(torch.utils.data.Dataset):
         make dict with {img_id: [targets]}
         :return:
         """
+        if self.test:
+            return [0 for _ in range(len(self.samples))]
+
         img_objects = defaultdict(list)
         for obj_values in self.obj_annotations.values():
             img_objects[obj_values['image_id']].append(obj_values['category_id'])
@@ -94,15 +103,21 @@ class HaitainDetectionSet(torch.utils.data.Dataset):
         return target
 
     def __getitem__(self, index):
-        file_name = self.img_annotations[self.samples[index]]['file_name']
-
+        if self.test:
+            file_name = self.samples[index]
+        else:
+            file_name = self.img_annotations[self.samples[index]]['file_name']
         img = Image.open(os.path.join(self.root, file_name)).convert('RGB')
-        target = self._load_target(index)
 
-        if self.transform is not None:
-            img, target = self.transform(img, target)
+        if self.test:
+            return self.transform(img, {'image_id': file_name})
+        else:
+            target = self._load_target(index)
 
-        return img, target
+            if self.transform is not None:
+                img, target = self.transform(img, target)
+
+            return img, target
 
     def __len__(self):
         return len(self.samples)

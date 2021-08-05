@@ -67,7 +67,7 @@ def main():
     train_datasets, val_datasets = create_train_val_set(data_root, validation_proportion=0.01)
 
     if args.test:
-        eval_datasets, _ = create_test_set(data_root)
+        eval_datasets, _ = create_test_set_from_json(data_root)
     else:
         eval_datasets = val_datasets
 
@@ -80,7 +80,7 @@ def main():
     logger = TextLogger(result_file)
     gt_path = f"{args.root}/annotations/instance_{test_split}.json"
     store = None if not args.store else f"{args.name}_{test_split}"
-    eval_plugin = EvaluationPlugin(detection_metrics(gt_path, experience=True, store=store),
+    eval_plugin = EvaluationPlugin(detection_metrics(gt_path, experience=True, store=store, pred_only=args.test),
                                    loggers=logger)
 
     # Create strategy.

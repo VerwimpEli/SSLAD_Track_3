@@ -35,21 +35,21 @@ def empty(*args, **kwargs):
     return torch.tensor(0.0)
 
 
-def detection_metrics(gt_path, stream=False, experience=False, store=False):
+def detection_metrics(gt_path, stream=False, experience=False, store=False, pred_only=False):
     metrics = []
     if stream:
         metrics.append(DetectionEvaluationPlugin(gt_path=gt_path, reset_at='stream', emit_at='stream',
-                                                 mode='eval', name='CocoEvalStream', store=store))
+                                                 mode='eval', name='CocoEvalStream', store=store, pred_only=pred_only))
     if experience:
         metrics.append(DetectionEvaluationPlugin(gt_path=gt_path, reset_at='experience', emit_at='experience',
-                                                 mode='eval', name='CocoEvalExp', store=store))
+                                                 mode='eval', name='CocoEvalExp', store=store, pred_only=pred_only))
     return metrics
 
 
 class DetectionEvaluationPlugin(GenericPluginMetric):
 
-    def __init__(self, reset_at, emit_at, mode, gt_path, name=None, store=None):
-        self._detection_results = DetectionMetric(gt_path, store=store)
+    def __init__(self, reset_at, emit_at, mode, gt_path, name=None, store=None, pred_only=False):
+        self._detection_results = DetectionMetric(gt_path, store=store, pred_only=pred_only)
         self.name = name
         super(DetectionEvaluationPlugin, self).__init__(
             self._detection_results, reset_at=reset_at, emit_at=emit_at,
@@ -70,9 +70,13 @@ class DetectionEvaluationPlugin(GenericPluginMetric):
 
 class DetectionMetric(Metric):
 
-    def __init__(self, gt_path, store=None):
-        self.gt_path = gt_path
-        self._gt = self.load_gt()
+    def __init__(self, gt_path, store=None, pred_only=False):
+        if not pred_only:
+            self.gt_path = gt_path
+            self._gt = self.load_gt()
+        else:
+            self.gt_path, self._gt = None, None
+        self.pred_only = pred_only
         self._dt = []
         self.store = store
 
@@ -88,44 +92,49 @@ class DetectionMetric(Metric):
                 box = box.tolist()
                 box_hw = [box[0], box[1], box[2] - box[0], box[3] - box[1]]
                 self._dt.append({
-                    'image_id': int(img_id),
+                    'image_id': img_id,
                     'category_id': int(label),
                     'bbox': box_hw,
                     'score': float(score)
                 })
 
     def result(self) -> Optional:
-        with open("./tmp_results.json", "w") as f:
-            json.dump(self._dt, f)
-        dt = self._gt.loadRes('./tmp_results.json')
-        img_ids = [dt['image_id'] for dt in self._dt]
-        coco_eval = COCOeval(self._gt, dt, 'bbox')
-        coco_eval.params.iouThrs = [0.5, 0.7]
-        coco_eval.params.imgIds = img_ids
-        coco_eval.evaluate()
-        coco_eval.accumulate()
 
-        out = "\n"
-        base_str = "Average Precision (AP) @[ Category={} \t| IoU={} | area=all | maxDets=100 ] = {:.3f}"
-        ious = [0, 0, 1, 1, 1, 0]
+        if self.pred_only:
+            self.store_results()
+            return "Only storing outputs"
+        else:
+            with open("./tmp_results.json", "w") as f:
+                json.dump(self._dt, f)
+            dt = self._gt.loadRes('./tmp_results.json')
+            img_ids = [dt['image_id'] for dt in self._dt]
+            coco_eval = COCOeval(self._gt, dt, 'bbox')
+            coco_eval.params.iouThrs = [0.5, 0.7]
+            coco_eval.params.imgIds = img_ids
+            coco_eval.evaluate()
+            coco_eval.accumulate()
 
-        mean, count = 0, 0
-        for i in range(1, 7):
-            s = coco_eval.eval['precision'][ious[i - 1], :, i - 1, 0, -1]
-            if len(s[s > -1]) == 0:
-                res = -1
-            else:
-                res = np.mean(s[s > -1])
-                mean += res
-                count += 1
-            out += base_str.format(categories[i], coco_eval.params.iouThrs[ious[i - 1]], res)
+            out = "\n"
+            base_str = "Average Precision (AP) @[ Category={} \t| IoU={} | area=all | maxDets=100 ] = {:.3f}"
+            ious = [0, 0, 1, 1, 1, 0]
+
+            mean, count = 0, 0
+            for i in range(1, 7):
+                s = coco_eval.eval['precision'][ious[i - 1], :, i - 1, 0, -1]
+                if len(s[s > -1]) == 0:
+                    res = -1
+                else:
+                    res = np.mean(s[s > -1])
+                    mean += res
+                    count += 1
+                out += base_str.format(categories[i], coco_eval.params.iouThrs[ious[i - 1]], res)
+                out += "\n"
+            out += base_str.format("all", "0.5/0.7", mean / count)
             out += "\n"
-        out += base_str.format("all", "0.5/0.7", mean / count)
-        out += "\n"
-        os.remove('./tmp_results.json')
+            os.remove('./tmp_results.json')
 
-        self.store_results()
-        return out
+            self.store_results()
+            return out
 
     def store_results(self):
         if self.store is not None and len(self._dt) > 0:
@@ -195,7 +204,9 @@ class DetectionBaseStrategy(BaseStrategy):
         '''
         assert len(self.mbatch) >= 3
         self.mbatch[0] = list(sample.to(self.device) for sample in self.mbatch[0])
-        self.mbatch[1] = [{k: v.to(self.device) for k, v in t.items()} for t in self.mbatch[1]]
+        if self.is_training:
+            self.mbatch[1] = [{k: v.to(self.device) for k, v in t.items()} for t in self.mbatch[1]]
+
         self.mbatch[-1] = torch.tensor(self.mbatch[-1]).to(self.device)
         # TODO: there could be more tensors in the mbatch
 
@@ -238,7 +249,22 @@ def create_train_val_set(root, validation_proportion=0.1, avalanche=True):
         return train_sets, val_sets
 
 
-def create_test_set(root):
+def create_test_set_from_json(root, avalanche=True):
+    with open('./test_image_ids.json', 'r') as f:
+        task_ids = json.load(f)
+
+    root = os.path.join(root, 'test')
+    test_sets = []
+    for samples in task_ids.values():
+        ts = haitain.HaitainDetectionSet(root, samples, test=True, transform=haitain.get_transform(False))
+        test_sets.append(ts)
+
+    if avalanche:
+        test_sets = [AvalancheDataset(test_set) for test_set in test_sets]
+    return test_sets, None
+
+
+def create_test_set(root, avalanche=True):
     task_dicts = [{'location': ['Citystreet', 'Countryroad'], 'period': 'Daytime', 'weather': ['Clear', 'Overcast']},
                   {'location': 'Highway', 'period': 'Daytime', 'weather': ['Clear', 'Overcast']},
                   {'period': 'Night'},
@@ -249,8 +275,8 @@ def create_test_set(root):
                  match_fn in match_fns]
 
     test_set_keys = ["Task 1", "Task 2", "Task 3", "Task 4"]
-    test_sets = [AvalancheDataset(test_set) for test_set in test_sets if len(test_set) > 0]
-
+    if avalanche:
+        test_sets = [AvalancheDataset(test_set) for test_set in test_sets if len(test_set) > 0]
     return test_sets, test_set_keys
 
 
