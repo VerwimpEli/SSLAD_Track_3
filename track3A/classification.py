@@ -75,9 +75,9 @@ def main():
     store = args.name if args.store else None
 
     eval_plugin = EvaluationPlugin(
-        accuracy_metrics(experience=True, stream=True), loss_metrics(experience=True, stream=True),
-        class_accuracy_metrics(experience=True, stream=True),
-        ClassEvaluationPlugin(reset_at='experience', emit_at='experience', mode='eval',
+        accuracy_metrics(stream=True), loss_metrics(stream=True),
+        class_accuracy_metrics(stream=True),
+        ClassEvaluationPlugin(reset_at='stream', emit_at='stream', mode='eval',
                               store=store),
         loggers=[text_logger, interactive_logger])
 
@@ -91,7 +91,7 @@ def main():
         strategy.train(experience, eval_streams=[], shuffle=False, num_workers=args.num_workers)
 
         results = strategy.eval(benchmark.test_stream, num_workers=args.num_workers)
-        mean_acc = results['Top1_ClassAcc_Stream/eval_phase/test_stream'].values()
+        mean_acc = [r[1] for r in results['Top1_ClassAcc_Stream/eval_phase/test_stream/Task000']]
         accuracies_test.append(sum(mean_acc) / len(mean_acc))
 
     print(f"Average mean test accuracy: {sum(accuracies_test) / len(accuracies_test) * 100:.3f}%")
