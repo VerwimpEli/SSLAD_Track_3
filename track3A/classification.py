@@ -28,6 +28,8 @@ def main():
                         help='If set model will be evaluated on test set, else on validation set')
     parser.add_argument('--no_cuda', action='store_true',
                         help='If set, training will be on the CPU')
+    parser.add_argument('--store_model', action='store_true',
+                        help="Stores model if specified. Has no effect is store is not set")
     args = parser.parse_args()
 
     ######################################
@@ -66,7 +68,7 @@ def main():
     if evaluate == "val":
         test_sets = create_val_set(args.root, img_size)
     else:
-        test_sets, test_sets_keys = create_test_set(args.root, img_size)
+        test_sets, _ = create_test_set_from_pkl(args.root, img_size)
 
     benchmark = create_multi_dataset_generic_benchmark(train_datasets=train_sets, test_datasets=test_sets)
 
@@ -100,6 +102,9 @@ def main():
     print(f"Final mean test accuracy: {accuracies_test[-1] * 100:.3f}%")
     print(f"Final mean test accuracy: {accuracies_test[-1] * 100:.3f}%",
           file=open(f'./{args.name}.log', 'a'))
+
+    if args.store_model:
+        torch.save(model.state_dict(), f'./{args.name}.pt')
 
 
 if __name__ == '__main__':

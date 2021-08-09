@@ -1,4 +1,5 @@
 import os.path
+import pickle
 
 from avalanche.benchmarks.utils import AvalancheDataset
 
@@ -27,6 +28,21 @@ def create_val_set(root, img_size, avalanche=True):
         return [AvalancheDataset(val_set_1), AvalancheDataset(val_set_2)]
     else:
         return [val_set_1, val_set_2]
+
+
+def create_test_set_from_pkl(root, avalanche=True):
+    file_names = os.listdir(os.path.join(root, 'test_track3A'))
+    file_names = sorted(file_names, key=lambda x: int(x[0:2]))
+    test_sets = []
+    for file in file_names:
+        with open(os.path.join(root, 'test_track3A', file), 'rb') as f:
+            ds = pickle.load(f)
+            ds = hc.HaitainObjectTestSet(None, ds.samples)
+            test_sets.append(ds)
+    if avalanche:
+        test_sets = [AvalancheDataset(ts) for ts in test_sets]
+
+    return test_sets, None
 
 
 def create_test_set(root, img_size, avalanche=True):
