@@ -88,6 +88,8 @@ class DetectionMetric(Metric):
     @torch.no_grad()
     def update(self, prediction, img_ids):
         for img_id, img_pred in zip(img_ids, prediction):
+            if isinstance(img_id, torch.Tensor):
+                img_id = img_id.item()
             for box, label, score in zip(img_pred['boxes'], img_pred['labels'], img_pred['scores']):
                 box = box.tolist()
                 box_hw = [box[0], box[1], box[2] - box[0], box[3] - box[1]]
