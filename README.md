@@ -22,7 +22,7 @@ cuda toolkit 10.2*
 `export PYTHONPATH=[Avalanche directory]:$PYTHONPATH`
 
 *Any questions, problems... can be mailed to 
-eli.verwimp(at)kuleuven.be.* 
+eli.verwimp(at)kuleuven.be, or by creating a git issue.* 
 
 ### Avalanche instructions
 
