@@ -64,7 +64,7 @@ def main():
         model.load_state_dict(torch.load(f"./{args.load_model}"))
 
     # Setup Benchmark
-    train_datasets, val_datasets = create_train_val_set(data_root, validation_proportion=0.01)
+    train_datasets, val_datasets = create_train_val_set(data_root, validation_proportion=0.1)
 
     if args.test:
         eval_datasets, _ = create_test_set_from_json(data_root)
