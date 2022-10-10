@@ -1,3 +1,10 @@
+### Depracated  
+
+This code was used in the SSLAD Track 3 Challenge. To facilitae
+easier use outside the challenge, a new repository has been created.
+Please use: [CLAD repo](https://github.com/VerwimpEli/CLAD)
+
+
 ### ICCV 2021 Workshop SSLAD Track 3 - Continual Learning
 
 This repository provides the code required to participate in the
